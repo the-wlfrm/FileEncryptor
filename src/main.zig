@@ -92,7 +92,7 @@ pub fn main(init: std.process.Init) !void {
 
     const args = try init.minimal.args.toSlice(init.arena.allocator());
 
-    if (args.len < 5) {
+    if (args < 5) {
         printInfo();
         return;
     }
@@ -103,7 +103,7 @@ pub fn main(init: std.process.Init) !void {
     const output_path = args[4];
 
     var key: [KeyLen]u8 = undefined;
-    var key_file = try std.Io.Dir.cwd().openFile(io, key_path, .{});
+    var key_file = try std.Io.File.cwd().openFile(io, key_path, .{});
     defer key_file.close(io);
 
     var key_buf: [KeyLen]u8 = undefined;
