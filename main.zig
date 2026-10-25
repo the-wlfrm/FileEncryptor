@@ -14,11 +14,41 @@ fn printInfo() void {
     , .{});
 }
 
-fn ecnryptFile(io: std.Io, allocator: std.mem.Allocator, input_path: []const u8, output_path: []const u8, key: [KeyLen]u8) void {
-    //
+fn encryptFile(io: std.Io, allocator: std.mem.Allocator, input_path: []const u8, output_path: []const u8, key: [KeyLen]u8) !void {
+    const in_file = try std.Io.Dir.cwd().openFile(io, input_path, .{});
+    defer in_file.close(io);
+
+    const stat = try in_file.stat(io);
+    const plaintext = try allocator.alloc(u8, stat.size);
+    defer allocator.free(plaintext);
+
+    _ = try in_file.readPositionalAll(io, plaintext, 0);
+
+    var nonce: [NonceLen]u8 = undefined;
+    io.random(&nonce);
+
+    const ciphertext = try allocator.alloc(u8, plaintext);
+    defer allocator.free(ciphertext);
+    var tag: [TagLen]u8 = undefined;
+
+    crypto.aead.chacha_poly.XChaCha20Poly1305.encrypt(
+        ciphertext,
+        &tag,
+        plaintext,
+        "",
+        nonce,
+        key,
+    );
+
+    const out_file = try std.Io.Dir.cwd().createFile(io, output_path, .{});
+    defer out_file.close(io);
+
+    try out_file.writeStreamingAll(io, &nonce);
+    try out_file.writeStreamingAll(io, ciphertext);
+    try out_file.writeStreamingAll(io, &tag);
 }
 
-fn decryptFile(io: std.Io, allocator: std.mem.Allocator, input_path: []const u8, output_path: []const u8, key: [KeyLen]u8) void {
+fn decryptFile(io: std.Io, allocator: std.mem.Allocator, input_path: []const u8, output_path: []const u8, key: [KeyLen]u8) !void {
     //
 }
 
@@ -34,7 +64,25 @@ pub fn main(init: std.process.Init) !void {
     }
 
     const mode = args[1];
-    const keyfile = args[2];
-    const input_file = args[3];
-    const output_file = args[4];
+    const key_path = args[2];
+    const input_path = args[3];
+    const output_path = args[4];
+
+    var key: [KeyLen]u8 = undefined;
+    var key_file = try std.Io.File.cwd().openFile(io, key_path, .{});
+    defer key_file.close(io);
+
+    var key_buf: [KeyLen]u8 = undefined;
+    var key_reader = key_file.reader(io, &key_buf);
+    try key_reader.interface.readSliceAll(&key);
+
+    if (std.mem.eql(u8, mode, "enc")) {
+        try encryptFile(io, allocator, input_path, output_path, key);
+        std.debug.print("Файл успешно зашифрован! ({s})\n", .{output_path});
+    } else if (std.mem.eql(u8, mode, "dec")) {
+        try decryptFile(io, allocator, input_path, output_path, key);
+        std.debug.print("Файл успешно расифрован! ({s})\n", .{output_path});
+    } else {
+        printInfo();
+    }
 }
