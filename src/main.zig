@@ -115,7 +115,7 @@ pub fn main(init: std.process.Init) !void {
         std.debug.print("Файл успешно зашифрован! ({s})\n", .{output_path});
     } else if (std.mem.eql(u8, mode, "dec")) {
         try decryptFile(io, allocator, input_path, output_path, key);
-        std.debug.print("Файл успешно расифрован! ({s})\n", .{output_path});
+        std.debug.print("Файл успешно расшифрован! ({s})\n", .{output_path});
     } else {
         printInfo();
     }
