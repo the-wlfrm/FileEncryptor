@@ -24,3 +24,7 @@ Thumbs.db
 *.key
 *.pem
 private_key.json
+
+.zig-cache/
+zig-cache/
+zig-out/
